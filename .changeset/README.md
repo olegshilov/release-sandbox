@@ -18,7 +18,9 @@ or by hand, as `.changeset/<any-name>.md`:
 What changed, for the changelog.
 ```
 
-`patch` fixes, `minor` adds, `major` breaks. Dependents are bumped for you.
+`patch` fixes, `minor` adds. While a package is 0.x, `minor` is also how a
+breaking change is released: `major` would publish 1.0.0, so CI refuses it
+without the `release-1.0` label. Dependents are bumped for you.
 A change that must not be released (or a revert of an unreleased one) gets the
 `no-release` label instead. CI (`ci`) checks both.
 

@@ -101,12 +101,31 @@ for (const { status, path } of changes) {
 
 // 1. Every changed package is named by a changeset this PR adds.
 const named = new Set();
+const versionOf = new Map(
+  [...packages.values()].map((pkg) => [pkg.name, pkg.version]),
+);
 for (const { status, path } of changes) {
   if (status !== 'A' || !isChangeset(path)) continue;
-  for (const name of releasesIn(path)) {
-    if (packageNames.has(name)) named.add(name);
-    else
+  for (const { name, bump } of releasesIn(path)) {
+    if (!packageNames.has(name)) {
       errors.push(`${path} names ${name}, which is not a workspace package.`);
+      continue;
+    }
+    named.add(name);
+    // Changesets has no zero-major mode: `major` on 0.x publishes 1.0.0. In
+    // 0.x a breaking change is a `minor`; 1.0.0 is a decision, so it is a label.
+    const version = versionOf.get(name);
+    if (
+      bump === 'major' &&
+      version.startsWith('0.') &&
+      !labels.includes('release-1.0')
+    ) {
+      errors.push(
+        `${path}: major for ${name} ${version} would publish 1.0.0. ` +
+          'In 0.x a breaking change is `minor`; label the PR `release-1.0` ' +
+          'if 1.0.0 is intended.',
+      );
+    }
   }
 }
 
@@ -146,7 +165,7 @@ function isReleased(file) {
   );
 }
 
-// The package names in a changeset's front matter ("'@scope/name': minor").
+// The releases in a changeset's front matter ("'@scope/name': minor").
 function releasesIn(path) {
   const frontMatter = /^---\r?\n([\s\S]*?)\r?\n?---/.exec(
     readFileSync(path, 'utf8'),
@@ -162,7 +181,7 @@ function releasesIn(path) {
       const release =
         /^\s*(['"]?)(.+?)\1\s*:\s*(major|minor|patch|none)\s*$/.exec(line);
       if (!release) errors.push(`${path}: cannot read "${line}".`);
-      return release?.[2];
+      return release && { name: release[2], bump: release[3] };
     })
     .filter(Boolean);
 }

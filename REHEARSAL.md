@@ -14,15 +14,13 @@ the scenarios in order: each starts from the versions the previous one left.
 
 ## Setup on GitHub
 
-1. **A private repository.** It must be private before the first push: a
-   package first published from a public repository may come out public, and a
-   public package can never be made private again.
+1. **The repository** is public, by the user's choice (2026-11-05), so the
+   packages published from it come out public too — harmless for three
+   README-only libraries. web-libs stays private; open question 2 is answered
+   there, not here.
    ```sh
-   gh repo view olegshilov/release-sandbox --json visibility   # exists?
-   # it does not exist:
-   gh repo create olegshilov/release-sandbox --private --source . --remote origin
-   # it exists and is public:
-   gh repo edit olegshilov/release-sandbox --visibility private --accept-visibility-change-consequences
+   gh repo view olegshilov/release-sandbox --json visibility   # PUBLIC
+   git remote add origin git@github.com:olegshilov/release-sandbox.git
    ```
 2. **Repository settings, labels.**
    ```sh
@@ -34,14 +32,17 @@ the scenarios in order: each starts from the versions the previous one left.
      -f default_workflow_permissions=read -F can_approve_pull_request_reviews=false
    gh label create no-release --color ededed --description "Changes package files without releasing them"
    gh label create preview --color 1d76db --description "Publish snapshot versions under the pr-<N> dist-tag"
+   gh label create release-1.0 --color b60205 --description "Allows a major changeset on a 0.x package (publishes 1.0.0)"
    ```
 3. **First push** (the only direct push to main; no ruleset exists yet):
    `git push -u origin main`.
    - Expected Release run, green: `pack` logs `was not found in the registry`
      and `skip … @0.0.0: never released` for all three; `publish` logs "No
-     unpublished projects to publish."; `version` is skipped and the run shows
-     the warning **"Release PR not updated"** (no App yet). No package, tag or
-     PR.
+     unpublished projects to publish."; no package and no tag. The App
+     (Setup 4) was set up before this push, so `version` runs and opens the
+     first `R` from `.changeset/initial-release.md`: 0.1.0 for all three. If the
+     App is missing, `version` is skipped with the warning **"Release PR not
+     updated"** instead.
    - Record: the `GITHUB_TOKEN` (`packages: read`) asked for three packages
      that do not exist. 404 means "not published" and the run is green. A 403
      stops `pack` red, and nothing can ever publish. Fallback: a classic PAT
@@ -51,8 +52,11 @@ the scenarios in order: each starts from the versions the previous one left.
      (a direct push: the ruleset is not on yet).
    - Record: the `pack` artifact holds only `publish-plan.json`, and
      `publish` downloads it without error.
-4. **The release App**, on the personal account (no organisation admin
-   involved): Settings → Developer settings → GitHub Apps → New GitHub App.
+4. **The release App** — done on 2026-11-05: `olegshilov-release-sandbox`,
+   installed on this repository only, variable `RELEASE_APP_CLIENT_ID` and
+   secret `RELEASE_APP_KEY` set. To redo it, on the personal account (no
+   organisation admin involved): Settings → Developer settings → GitHub Apps →
+   New GitHub App.
    - Name e.g. `olegshilov-release-bot`, homepage the repository URL, webhook
      off.
    - Repository permissions: **Contents: Read and write**, **Pull requests:
@@ -304,15 +308,24 @@ Expected:
   then `gh api -X DELETE /user/packages/npm/sandbox-alpha/versions/<id>` per
   snapshot.
 
-## 12. Major via a changeset
+## 12. A breaking change in 0.x
 
-Steps: branch `s12`: add `export const API_VERSION = 1;` to alpha, changeset
-alpha → **major** "Declare the API stable.", PR
-`feat(alpha)!: declare the API stable`, merge, approve and merge R.
+The packages stay 0.x (decided 2026-11-05: no 1.0 jump). Changesets has no
+zero-major mode, so a `major` changeset on a 0.x package publishes 1.0.0; a
+breaking change is a `minor` instead, and `ci` refuses a `major` on 0.x unless
+the PR carries the `release-1.0` label.
 
-Expected: R is **alpha 1.0.0, beta 0.3.1, gamma 0.2.2**, gamma's peer
-`^1.0.0`. `latest` of alpha is `1.0.0`. The `!` in the title is cosmetic: only
-the changeset decides the bump.
+Steps: branch `s12`: rename alpha's export (a breaking change), changeset
+alpha → **major** "Rename the export.", PR `feat(alpha)!: rename the export`.
+Then change the changeset to **minor** and push.
+
+Expected:
+
+- `ci` red first: "major for @olegshilov/sandbox-alpha 0.x would publish
+  1.0.0. In 0.x a breaking change is `minor` …".
+- Green after the change to `minor`. Merge, approve and merge R: alpha's next
+  minor, beta and gamma a patch each, gamma's peer rewritten to alpha's new
+  minor. Nothing reaches 1.0.0.
 
 ## Known behaviour
 
@@ -322,9 +335,10 @@ the changeset decides the bump.
   server-client uses in web-libs, narrows the same way, at publish time. The
   experimental option `___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH.onlyUpdatePeerDependentsWhenOutOfRange`
   stops it; not used.
-- **An alpha major gives gamma a patch** (scenario 12), although its peer
-  drops alpha 0.x. That is the v3 rule that replaced v2's major cascade. When
-  a dependent's consumers must notice, its author adds a changeset for it.
+- **An alpha minor gives gamma only a patch** (scenarios 7 and 12), even when
+  that minor is breaking (0.x) and gamma's peer moves past it. That is the v3
+  rule that replaced v2's major cascade. When a dependent's consumers must
+  notice, its author adds a changeset for it.
 - **A tag lands on the commit of the run that creates it**: after a failed
   publish (scenario 10) that is the commit of the re-run, not necessarily the
   one that raised the version.
@@ -342,8 +356,8 @@ the changeset decides the bump.
 1. `GITHUB_TOKEN` with `packages: read` on a package that does not exist yet:
    404 or 403 (Setup 3).
 2. `GITHUB_TOKEN` with `packages: write` creates a package in the user
-   namespace, `--access restricted` is accepted, the package comes out private
-   (scenario 2, Setup 6).
+   namespace and `--access restricted` is accepted (scenario 2, Setup 6).
+   Private-by-default only shows in web-libs: this repository is public.
 3. GitHub Packages' wording for a re-publish (scenario 10).
 4. GitHub Packages honours dist-tags and leaves `latest` alone (scenario 11).
 5. `require_code_owner_review` at 0 required approvals (scenario 1).
