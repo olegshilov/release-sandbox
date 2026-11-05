@@ -1,4 +1,10 @@
 # Only the release PR may change a CHANGELOG.md (scripts/check-release-files.mjs
 # enforces that), so this line means: every release needs the owner's approval.
 # Feature PRs touch no owned file and need none.
+#
+# Not owned here, on purpose: the release machinery (.github/, scripts/,
+# .changeset/config.json, the root manifests). A sole owner cannot approve his
+# own pull request, so owning those paths would block every change to them.
+# entry-fi/web-libs owns them with a team, so that this file and the workflows
+# cannot be changed unreviewed.
 /packages/*/CHANGELOG.md @olegshilov

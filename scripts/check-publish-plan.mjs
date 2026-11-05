@@ -7,18 +7,17 @@
 // (a trailing ` (date)`, as nx wrote them in web-libs, is accepted).
 //
 // Usage: node scripts/check-publish-plan.mjs <plan.json>
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { globSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const file = process.argv[2];
 const plan = JSON.parse(readFileSync(file, 'utf8'));
 
 const dirOf = new Map(
-  readdirSync('packages').map((dir) => {
-    const { name } = JSON.parse(
-      readFileSync(`packages/${dir}/package.json`, 'utf8'),
-    );
-    return [name, `packages/${dir}`];
-  }),
+  globSync('packages/*/package.json').map((manifest) => [
+    JSON.parse(readFileSync(manifest, 'utf8')).name,
+    dirname(manifest),
+  ]),
 );
 
 const problems = [];

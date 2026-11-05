@@ -6,12 +6,15 @@
 # release. Every run publishes everything that is missing, so a dropped run, a
 # stale release PR or a failed publish is repaired by the next run (or by
 # "Re-run all jobs" - never "Re-run failed jobs", which reuses a stale plan).
+# Only a run of the newest main commit touches the release PR, so re-running
+# an older run cannot rebuild it from an old tree.
 name: Release
 
 on:
   push:
     branches: [main]
   # Drive the state machine without a new commit, e.g. after adding the App.
+  # From main only: see the `if` on `pack`.
   workflow_dispatch:
 
 permissions: {}
@@ -24,6 +27,9 @@ concurrency:
 
 jobs:
   pack:
+    # A dispatch from any other branch would publish that branch's code; it
+    # skips this job, and with it every job below.
+    if: github.ref == 'refs/heads/main'
     # Runs the repository's code (build, tests) and so holds no write token.
     runs-on: ubuntu-latest # web-libs: arc-runners
     timeout-minutes: 15
@@ -33,6 +39,7 @@ jobs:
     outputs:
       changesets: ${{ steps.state.outputs.changesets }}
       app: ${{ steps.state.outputs.app }}
+      tip: ${{ steps.state.outputs.tip }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -69,18 +76,25 @@ jobs:
           path: ${{ runner.temp }}/pack
           retention-days: 7
 
-      - name: pending changesets, release App configured
+      - name: pending changesets, release App configured, newest main commit
         id: state
         env:
           CLIENT_ID: ${{ vars.RELEASE_APP_CLIENT_ID }}
           HAS_KEY: ${{ secrets.RELEASE_APP_KEY != '' }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "changesets=$(find .changeset -name '*.md' ! -name README.md | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
           if [ -n "$CLIENT_ID" ] && [ "$HAS_KEY" = true ]; then
             echo "app=true" >> "$GITHUB_OUTPUT"
           else
             echo "app=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Release PR not updated::The RELEASE_APP_CLIENT_ID variable or the RELEASE_APP_KEY secret is missing (REHEARSAL.md, section 0). Publishing is not affected."
+            echo "::warning title=Release PR not updated::The RELEASE_APP_CLIENT_ID variable or the RELEASE_APP_KEY secret is missing (REHEARSAL.md, Setup). Publishing is not affected."
+          fi
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" = "$GITHUB_SHA" ]; then
+            echo "tip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tip=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Release PR left alone::main has moved past this commit; the run of the newer commit updates the release PR."
           fi
 
   publish:
@@ -129,7 +143,10 @@ jobs:
     # Only after a clean publish: a release PR built on top of a version that
     # never reached the registry would bury it under the next one.
     needs: [pack, publish]
-    if: needs.pack.outputs.changesets != '0' && needs.pack.outputs.app == 'true'
+    if: >-
+      needs.pack.outputs.changesets != '0' &&
+      needs.pack.outputs.app == 'true' &&
+      needs.pack.outputs.tip == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

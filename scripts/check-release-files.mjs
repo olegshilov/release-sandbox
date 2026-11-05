@@ -7,15 +7,17 @@
 // 2. outside the release PR, nothing may change a `version`, write a
 //    CHANGELOG.md or delete a pending changeset (except a `no-release` revert),
 //    and a new package starts at 0.0.0 (its first version comes from a
-//    release PR).
+//    release PR);
+// 3. the release PR changes nothing but those: anything else on its branch
+//    was pushed there by hand and would skip checks 1 and 2.
 //
 // HEAD is the PR's merge commit; HEAD^1 is the main commit it merges into, so
 // the diff is exactly what the squash will add, whatever else landed meanwhile.
 //
 // Env: HEAD_REF, AUTHOR_TYPE, LABELS (JSON array of label names).
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
-import { matchesGlob } from 'node:path';
+import { globSync, readFileSync } from 'node:fs';
+import { basename, dirname, matchesGlob } from 'node:path';
 
 const BASE = 'HEAD^1';
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
@@ -27,9 +29,9 @@ const isReleasePr =
 const labels = JSON.parse(process.env.LABELS || '[]');
 const { changedFilePatterns } = readJson('.changeset/config.json');
 const packages = new Map(
-  readdirSync('packages').map((dir) => [
-    dir,
-    readJson(`packages/${dir}/package.json`),
+  globSync('packages/*/package.json').map((file) => [
+    basename(dirname(file)),
+    readJson(file),
   ]),
 );
 const packageNames = new Set([...packages.values()].map((pkg) => pkg.name));
@@ -46,8 +48,25 @@ const errors = [];
 const isChangeset = (path) =>
   /^\.changeset\/[^/]+\.md$/.test(path) && path !== '.changeset/README.md';
 
+// 3. The release PR is `changeset version` output and nothing else.
 if (isReleasePr) {
-  console.log('Release PR: versions, changelogs and changesets may change.');
+  const foreign = changes.filter(
+    ({ status, path }) =>
+      !(status === 'D' && isChangeset(path)) &&
+      !(
+        status !== 'D' &&
+        /^packages\/[^/]+\/(CHANGELOG\.md|package\.json)$/.test(path)
+      ),
+  );
+  if (foreign.length > 0) {
+    console.error(
+      'The release PR changes only versions, changelogs and the changesets it ' +
+        'consumed. Not from `changeset version`:\n' +
+        foreign.map(({ status, path }) => `- ${status} ${path}`).join('\n'),
+    );
+    process.exit(1);
+  }
+  console.log('Release PR: versions, changelogs and consumed changesets only.');
   process.exit(0);
 }
 

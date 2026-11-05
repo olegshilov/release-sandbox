@@ -25,20 +25,22 @@ tiny packages published to GitHub Packages:
 Publishing follows state, not events: any run publishes whatever is missing,
 so a failed or skipped run is repaired by the next one. Recovery is
 **Re-run all jobs** (or "Run workflow" on Release), never "Re-run failed jobs".
+Only a run of the newest main commit updates the release PR, so re-running an
+old run is safe.
 
 ## Files that make up the release process
 
-| File                              | Role                                                             |
-| --------------------------------- | ---------------------------------------------------------------- |
-| `.changeset/config.json`          | Changesets v3: changelog format, what counts as a change         |
-| `.github/workflows/ci.yml`        | the `ci` check on every PR                                       |
-| `.github/workflows/release.yml`   | pack, publish, release PR                                        |
-| `.github/workflows/preview.yml`   | snapshot versions of a PR labelled `preview`                     |
-| `scripts/check-release-files.mjs` | PR side: changesets cover changes; versions are the release PR's |
-| `scripts/check-publish-plan.mjs`  | never publish 0.0.0 or a version without a changelog entry       |
-| `scripts/github-releases.mjs`     | tag and GitHub-release every published version                   |
-| `.github/rulesets/main.json`      | branch rules for main (applied with `gh api`)                    |
-| `.github/CODEOWNERS`              | the release PR needs the owner's approval                        |
+| File                              | Role                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------- |
+| `.changeset/config.json`          | Changesets v3: changelog format, what counts as a change                                    |
+| `.github/workflows/ci.yml`        | the `ci` check on every PR                                                                  |
+| `.github/workflows/release.yml`   | pack, publish, release PR                                                                   |
+| `.github/workflows/preview.yml`   | snapshot versions of a PR labelled `preview`                                                |
+| `scripts/check-release-files.mjs` | PR side: changesets cover changes; versions are the release PR's, and it holds nothing else |
+| `scripts/check-publish-plan.mjs`  | never publish 0.0.0 or a version without a changelog entry                                  |
+| `scripts/github-releases.mjs`     | tag and GitHub-release every published version                                              |
+| `.github/rulesets/main.json`      | branch rules for main (applied with `gh api`)                                               |
+| `.github/CODEOWNERS`              | the release PR needs the owner's approval                                                   |
 
 The rehearsal itself is in [REHEARSAL.md](REHEARSAL.md).
 

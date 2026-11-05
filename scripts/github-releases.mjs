@@ -8,32 +8,22 @@
 //
 // Needs GH_TOKEN with contents: write. `gh release create --target` creates the
 // `<name>@<version>` tag on this commit when it does not exist yet.
-import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { globSync, readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const sha = process.env.GITHUB_SHA;
 if (!sha) throw new Error('GITHUB_SHA is not set');
 
-const gh = (...args) =>
-  execFileSync('gh', args, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-for (const dir of readdirSync('packages')) {
-  const pkg = JSON.parse(readFileSync(`packages/${dir}/package.json`, 'utf8'));
+for (const manifest of globSync('packages/*/package.json')) {
+  const pkg = JSON.parse(readFileSync(manifest, 'utf8'));
   if (pkg.private || pkg.version === '0.0.0') continue;
 
   const tag = `${pkg.name}@${pkg.version}`;
-  try {
-    gh('release', 'view', tag, '--json', 'tagName');
-    continue; // already released
-  } catch {
-    // no release yet: create it below
-  }
+  if (released(tag)) continue;
 
-  const changelog = readFileSync(`packages/${dir}/CHANGELOG.md`, 'utf8');
-  gh(
+  const changelog = readFileSync(`${dirname(manifest)}/CHANGELOG.md`, 'utf8');
+  const create = gh(
     'release',
     'create',
     tag,
@@ -45,7 +35,28 @@ for (const dir of readdirSync('packages')) {
     section(changelog, pkg.version),
     ...(pkg.version.includes('-') ? ['--prerelease'] : []),
   );
+  if (!create.ok) fail(`gh release create ${tag}: ${create.stderr}`);
   console.log(`released ${tag}`);
+}
+
+// Only gh's "release not found" means "not released"; any other failure (the
+// token, the network) stops the run rather than guessing.
+function released(tag) {
+  const view = gh('release', 'view', tag, '--json', 'tagName');
+  if (view.ok) return true;
+  if (view.stderr.includes('release not found')) return false;
+  fail(`gh release view ${tag}: ${view.stderr}`);
+}
+
+function gh(...args) {
+  const run = spawnSync('gh', args, { encoding: 'utf8' });
+  if (run.error) throw run.error; // gh itself is missing
+  return { ok: run.status === 0, stderr: run.stderr.trim() };
+}
+
+function fail(message) {
+  console.error(message);
+  process.exit(1);
 }
 
 function section(changelog, version) {

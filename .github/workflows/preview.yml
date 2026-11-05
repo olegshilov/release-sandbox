@@ -1,7 +1,9 @@
 # Phase 2. Snapshot releases of a pull request, on demand: label it `preview`.
-# Publishes 0.0.0-pr-<N>-<datetime> versions of the packages its changesets
-# release under the dist-tag pr-<N>, never `latest`; install them with
+# Publishes 0.0.0-pr-<N>-<datetime> versions of the packages the pending
+# changesets release (the PR's and any still on main) under the dist-tag
+# pr-<N>, never `latest`; install them with
 # `pnpm add @olegshilov/sandbox-alpha@pr-<N>`. Nothing is committed or tagged.
+# With no pending changeset, `changeset version --snapshot` fails the run.
 name: Preview
 
 on:
@@ -10,9 +12,11 @@ on:
 
 permissions: {}
 
+# A newer push waits instead of cancelling: a cancelled `publish` would leave
+# half of a snapshot set on the registry.
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   pack:
@@ -39,6 +43,7 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # `changeset pack` asks the registry which versions it lacks.
       - name: authenticate to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
@@ -62,7 +67,7 @@ jobs:
         with:
           name: preview
           path: ${{ runner.temp }}/pack/packages
-          if-no-files-found: error # nothing to preview: the PR has no changeset
+          if-no-files-found: error
           retention-days: 7
 
   publish:
