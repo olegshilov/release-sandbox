@@ -1,6 +1,6 @@
 {
   "name": "@olegshilov/sandbox-gamma",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Release sandbox: an optional peer of alpha; it is bumped only when an alpha release leaves its peer range.",
   "license": "UNLICENSED",
   "repository": {
