@@ -9,3 +9,8 @@ export function greetAll(names: readonly string[]): string {
 export function greetBoth(a: string, b: string): [Greeting, Greeting] {
   return [greet(a), greet(b)];
 }
+
+/** Greets nobody: an empty string. */
+export function greetNone(): string {
+  return greetAll([]);
+}
