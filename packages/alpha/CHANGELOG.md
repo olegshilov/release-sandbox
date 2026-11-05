@@ -1,5 +1,15 @@
 # @olegshilov/sandbox-alpha
 
+## 0.2.0
+
+### Minor Changes
+
+- [#7](https://github.com/olegshilov/release-sandbox/pull/7) [`986ee88`](https://github.com/olegshilov/release-sandbox/commit/986ee889495a12f041f377ba49d18c393d2ed4be) Thanks [@olegshilov](https://github.com/olegshilov)! - Add `farewell`.
+
+### Patch Changes
+
+- [#9](https://github.com/olegshilov/release-sandbox/pull/9) [`e19c9f2`](https://github.com/olegshilov/release-sandbox/commit/e19c9f2816c9411c803bda90749ab61379178e6b) Thanks [@olegshilov](https://github.com/olegshilov)! - Polish `farewell`'s docs; gamma exports its name.
+
 ## 0.1.1
 
 ### Patch Changes

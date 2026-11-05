@@ -1,5 +1,12 @@
 # @olegshilov/sandbox-beta
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`986ee88`](https://github.com/olegshilov/release-sandbox/commit/986ee889495a12f041f377ba49d18c393d2ed4be), [`e19c9f2`](https://github.com/olegshilov/release-sandbox/commit/e19c9f2816c9411c803bda90749ab61379178e6b)]:
+  - @olegshilov/sandbox-alpha@0.2.0
+
 ## 0.2.0
 
 ### Minor Changes
