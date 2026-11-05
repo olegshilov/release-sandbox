@@ -1,5 +1,11 @@
 # @olegshilov/sandbox-alpha
 
+## 0.3.0
+
+### Minor Changes
+
+- [#19](https://github.com/olegshilov/release-sandbox/pull/19) [`755c282`](https://github.com/olegshilov/release-sandbox/commit/755c2828c985a4e367a5d6721fde10925bf07241) Thanks [@olegshilov](https://github.com/olegshilov)! - **Breaking:** rename `farewell` to `goodbye`.
+
 ## 0.2.2
 
 ### Patch Changes
