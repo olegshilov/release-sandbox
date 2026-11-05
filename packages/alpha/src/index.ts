@@ -15,3 +15,4 @@ export function farewell(name: string): string {
 export function wave(name: string): string {
   return `👋 ${name}`;
 }
+// second
