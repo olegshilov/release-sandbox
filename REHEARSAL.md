@@ -373,3 +373,45 @@ Expected:
     (Setup 3).
 12. GitHub accepts `concurrency.queue: max` (any Release run starts at all).
 13. The "App not configured" path: a warning, `version` skipped (Setup 3).
+
+## Results (2026-11-05)
+
+All twelve scenarios ran on this repository, PRs #1–#20. Final state: alpha
+0.3.0, beta 0.3.1, gamma 0.2.2 (peer `^0.3.0`), every version tagged and
+released, no version skipped or burned.
+
+Answers to the open questions:
+
+1. `GITHUB_TOKEN` with `packages: read` on a package that does not exist yet:
+   **404**, so "not published" and the run is green. No read PAT needed.
+2. `GITHUB_TOKEN` with `packages: write` created the three packages, linked
+   them to this repository and gave it the **Admin** role under "Manage
+   Actions access" by itself. (Public here because the repository is.)
+3. Re-publishing an existing version: `409 Conflict`,
+   `{"error":"Cannot publish over existing version"}`. "Re-run failed jobs"
+   hits it (stale plan); "Re-run all jobs" recovers.
+4. Dist-tags are honoured: snapshots went to `pr-17`, `latest` never moved.
+5. `require_code_owner_review` at 0 required approvals blocks the release PR
+   until the owner approves; feature PRs merge without a review.
+6. An approval survives the App's re-push of R when the diff is unchanged
+   (#3 after #4 and #5) and is dismissed when it changes (#3 after #6).
+7. Rulesets work on this public personal repository.
+8. The repository's package role can be lowered (Admin → Read) and restored;
+   a lowered role fails `publish` with `403 permission_denied: write_package`.
+9. `gh` is on the runner; `gh release create --target` tags `GITHUB_SHA`.
+10. changelog-github links the PR, the squash commit and the author
+    (`[#2] [f7dc703] Thanks @olegshilov!`); an App push triggers `ci`.
+11. An artifact holding only `publish-plan.json` uploads and downloads fine.
+12. GitHub accepts `concurrency.queue: max`.
+13. With the App configured, the very first push opened R (Setup 3).
+
+Observed, worth deciding for web-libs:
+
+- A dependent's literal peer is rewritten on every release of the package it
+  peers on, even when the dependent itself is not released (#3, #13).
+- GitHub's repository-wide "Latest" release badge lands on whichever package
+  was released last; cosmetic in a monorepo.
+- Merging R the moment it is approved, while `ci` is still running on the
+  App's last push, is refused; wait for `ci`.
+- Snapshot versions stay on the registry under `pr-<N>` until deleted
+  (needs `delete:packages`).
