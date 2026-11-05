@@ -1,6 +1,6 @@
 {
   "name": "@olegshilov/sandbox-alpha",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Release sandbox: a leaf package that exports one function.",
   "license": "UNLICENSED",
   "repository": {

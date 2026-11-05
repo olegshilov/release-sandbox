@@ -1,6 +1,6 @@
 {
   "name": "@olegshilov/sandbox-beta",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Release sandbox: depends on alpha (workspace:*), so every alpha release patches it.",
   "license": "UNLICENSED",
   "repository": {
