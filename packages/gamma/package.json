@@ -28,7 +28,7 @@
     "@olegshilov/sandbox-alpha": "workspace:*"
   },
   "peerDependencies": {
-    "@olegshilov/sandbox-alpha": "^0.1.0"
+    "@olegshilov/sandbox-alpha": "^0.1.1"
   },
   "peerDependenciesMeta": {
     "@olegshilov/sandbox-alpha": {

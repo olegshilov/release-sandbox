@@ -1,5 +1,11 @@
 # @olegshilov/sandbox-alpha
 
+## 0.1.1
+
+### Patch Changes
+
+- [#2](https://github.com/olegshilov/release-sandbox/pull/2) [`f7dc703`](https://github.com/olegshilov/release-sandbox/commit/f7dc703ccc797034d0924aa42548c39f22ff905c) Thanks [@olegshilov](https://github.com/olegshilov)! - Document that `greet` returns plain text.
+
 ## 0.1.0
 
 ### Minor Changes
