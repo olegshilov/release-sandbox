@@ -11,3 +11,8 @@ export function shout(text: Greeting | string): string {
 
 /** The name gamma goes by. */
 export const GAMMA_NAME = 'gamma';
+
+/** Whispers a greeting. */
+export function whisper(text: string): string {
+  return text.toLowerCase();
+}
