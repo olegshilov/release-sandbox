@@ -1,5 +1,11 @@
 # @olegshilov/sandbox-gamma
 
+## 0.2.1
+
+### Patch Changes
+
+- [#15](https://github.com/olegshilov/release-sandbox/pull/15) [`bbe068c`](https://github.com/olegshilov/release-sandbox/commit/bbe068cdcad5e3cb833ac5a0790c406c0145f7f0) Thanks [@olegshilov](https://github.com/olegshilov)! - Add `whisper`.
+
 ## 0.2.0
 
 ### Minor Changes
