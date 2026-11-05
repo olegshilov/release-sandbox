@@ -6,3 +6,5 @@ import type { Greeting } from '@olegshilov/sandbox-alpha';
 export function shout(text: Greeting | string): string {
   return `${text.toUpperCase()}!`;
 }
+
+// Gamma reads alpha through its optional peer.
