@@ -10,3 +10,8 @@ export function greet(name: string): Greeting {
 export function farewell(name: string): string {
   return `Goodbye, ${name}!`;
 }
+
+/** Waves at `name`. */
+export function wave(name: string): string {
+  return `👋 ${name}`;
+}
