@@ -1,5 +1,16 @@
 # @olegshilov/sandbox-beta
 
+## 0.3.0
+
+### Minor Changes
+
+- [#12](https://github.com/olegshilov/release-sandbox/pull/12) [`b69c735`](https://github.com/olegshilov/release-sandbox/commit/b69c735f2daf4a16dab339451572d2ca67d4a7eb) Thanks [@olegshilov](https://github.com/olegshilov)! - Add `greetNone`.
+
+### Patch Changes
+
+- Updated dependencies [[`6a03927`](https://github.com/olegshilov/release-sandbox/commit/6a039271babcc61404e3ae3eaf23c9e9f33cec98)]:
+  - @olegshilov/sandbox-alpha@0.2.2
+
 ## 0.2.2
 
 ### Patch Changes

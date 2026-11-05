@@ -1,5 +1,11 @@
 # @olegshilov/sandbox-alpha
 
+## 0.2.2
+
+### Patch Changes
+
+- [#14](https://github.com/olegshilov/release-sandbox/pull/14) [`6a03927`](https://github.com/olegshilov/release-sandbox/commit/6a039271babcc61404e3ae3eaf23c9e9f33cec98) Thanks [@olegshilov](https://github.com/olegshilov)! - Tighten the `farewell` docs.
+
 ## 0.2.1
 
 ### Patch Changes
