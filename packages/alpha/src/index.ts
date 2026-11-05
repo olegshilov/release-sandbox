@@ -7,6 +7,6 @@ export function greet(name: string): Greeting {
 }
 
 /** Says goodbye to `name`, politely, once. */
-export function farewell(name: string): string {
+export function goodbye(name: string): string {
   return `Goodbye, ${name}!`;
 }
