@@ -8,3 +8,6 @@ export function shout(text: Greeting | string): string {
 }
 
 // Gamma reads alpha through its optional peer.
+
+/** The name gamma goes by. */
+export const GAMMA_NAME = 'gamma';
