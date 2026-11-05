@@ -5,3 +5,8 @@ export type Greeting = `Hello, ${string}!`;
 export function greet(name: string): Greeting {
   return `Hello, ${name}!`;
 }
+
+/** Says goodbye to `name`. */
+export function farewell(name: string): string {
+  return `Goodbye, ${name}!`;
+}
