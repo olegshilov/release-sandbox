@@ -1,0 +1,27 @@
+{
+  "name": "@olegshilov/sandbox-alpha",
+  "version": "0.0.0",
+  "description": "Release sandbox: a leaf package that exports one function.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olegshilov/release-sandbox.git",
+    "directory": "packages/alpha"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "!**/*.tsbuildinfo",
+    "!**/*.test.ts"
+  ]
+}

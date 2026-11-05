@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "changelog": [
+    "@changesets/changelog-github",
+    { "repo": "olegshilov/release-sandbox" }
+  ],
+  "commit": false,
+  "baseBranch": "main",
+  "access": "restricted",
+  "updateInternalDependencies": "patch",
+  "changedFilePatterns": ["src/**", "!src/**/*.test.ts", "package.json"],
+  "format": false,
+  "fixed": [],
+  "linked": [],
+  "ignore": []
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@olegshilov/sandbox-beta",
+  "version": "0.0.0",
+  "description": "Release sandbox: depends on alpha (workspace:*), so every alpha release patches it.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olegshilov/release-sandbox.git",
+    "directory": "packages/beta"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "!**/*.tsbuildinfo",
+    "!**/*.test.ts"
+  ],
+  "dependencies": {
+    "@olegshilov/sandbox-alpha": "workspace:*"
+  }
+}

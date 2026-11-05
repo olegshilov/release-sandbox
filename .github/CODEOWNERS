@@ -1,0 +1,4 @@
+# Only the release PR may change a CHANGELOG.md (scripts/check-release-files.mjs
+# enforces that), so this line means: every release needs the owner's approval.
+# Feature PRs touch no owned file and need none.
+/packages/*/CHANGELOG.md @olegshilov

@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+
+# Same supply-chain defaults as entry-fi/web-libs: nothing younger than three
+# days installs, versions are pinned exactly, and no dependency runs an install
+# script unless it is listed under allowBuilds (none is).
+minimumReleaseAge: 4320
+savePrefix: ''

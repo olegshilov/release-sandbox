@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    # edited: the title becomes the squash commit's subject and is linted.
+    # labeled/unlabeled: the `no-release` label changes the verdict.
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # `ci` is the required status check in the ruleset. Do not rename it or turn
+  # it into a matrix: a matrix reports `ci (…)`, never a bare `ci`.
+  ci:
+    # entry-fi/web-libs runs on its self-hosted `arc-runners`; a personal
+    # repository cannot use them.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # The default ref is the PR's merge commit; HEAD^1 is the main commit it
+      # merges into, which check-release-files.mjs diffs against.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Squash merges take the PR title as the commit subject (repository
+      # setting), so the title is the only commit message main ever sees. It
+      # decides nothing about releases; this is for a readable history.
+      - name: PR title is a conventional commit
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
+
+      - name: changesets and release files
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node scripts/check-release-files.mjs
+
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm test

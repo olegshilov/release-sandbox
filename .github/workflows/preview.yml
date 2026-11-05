@@ -1,0 +1,103 @@
+# Phase 2. Snapshot releases of a pull request, on demand: label it `preview`.
+# Publishes 0.0.0-pr-<N>-<datetime> versions of the packages its changesets
+# release under the dist-tag pr-<N>, never `latest`; install them with
+# `pnpm add @olegshilov/sandbox-alpha@pr-<N>`. Nothing is committed or tagged.
+name: Preview
+
+on:
+  pull_request:
+    types: [labeled, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pack:
+    # Same-repository branches only: a fork's code never reaches a write token.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.label.name == 'preview' ||
+       (github.event.action == 'synchronize' &&
+        contains(github.event.pull_request.labels.*.name, 'preview')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: read # changelog-github looks up the PR behind each changeset
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: authenticate to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: |
+          printf '//npm.pkg.github.com/:_authToken=%s\n' "$NODE_AUTH_TOKEN" > "$RUNNER_TEMP/.npmrc"
+          echo "NPM_CONFIG_USERCONFIG=$RUNNER_TEMP/.npmrc" >> "$GITHUB_ENV"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: snapshot versions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: pnpm exec changeset version --snapshot "pr-$PR"
+
+      - run: pnpm build
+
+      - run: pnpm exec changeset pack --out-dir "$RUNNER_TEMP/pack"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: preview
+          path: ${{ runner.temp }}/pack/packages
+          if-no-files-found: error # nothing to preview: the PR has no changeset
+          retention-days: 7
+
+  publish:
+    # No checkout: publishes tarballs, runs none of the pull request's code.
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: preview
+          path: ${{ runner.temp }}/pack
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+          scope: '@olegshilov'
+
+      # Only this PR's snapshots, only under its own dist-tag. A tarball of any
+      # other version (a 0.0.0 package, a pending release) is left alone.
+      - name: publish under pr-${{ github.event.pull_request.number }}
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          shopt -s nullglob
+          for tgz in "$RUNNER_TEMP"/pack/*.tgz; do
+            case "$(basename "$tgz")" in
+              *-0.0.0-pr-"$PR"-*.tgz)
+                npm publish "$tgz" --tag "pr-$PR" --access restricted
+                echo "- \`$(basename "$tgz" .tgz)\`" >> "$GITHUB_STEP_SUMMARY" ;;
+              *) echo "skipped $(basename "$tgz"): not a pr-$PR snapshot" ;;
+            esac
+          done
+          echo "Install with \`pnpm add <package>@pr-$PR\`." >> "$GITHUB_STEP_SUMMARY"

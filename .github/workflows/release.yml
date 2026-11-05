@@ -1,0 +1,166 @@
+# Release by state. On every push to main:
+#   pack    - gate, then pack whatever package version the registry is missing
+#   publish - publish those tarballs; tag and GitHub-release every version
+#   version - open or update the "Version Packages" PR from pending changesets
+# Merging that PR is what changes versions on main, so merging it is the
+# release. Every run publishes everything that is missing, so a dropped run, a
+# stale release PR or a failed publish is repaired by the next run (or by
+# "Re-run all jobs" - never "Re-run failed jobs", which reuses a stale plan).
+name: Release
+
+on:
+  push:
+    branches: [main]
+  # Drive the state machine without a new commit, e.g. after adding the App.
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+  # Keep every pending run instead of only the newest one.
+  queue: max
+
+jobs:
+  pack:
+    # Runs the repository's code (build, tests) and so holds no write token.
+    runs-on: ubuntu-latest # web-libs: arc-runners
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read # `changeset publish-plan` asks the registry what it has
+    outputs:
+      changesets: ${{ steps.state.outputs.changesets }}
+      app: ${{ steps.state.outputs.app }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7 # no cache: nothing a PR wrote reaches a release
+        with:
+          node-version-file: .nvmrc
+
+      # Job-scoped npmrc (the web-libs pattern): the repo .npmrc maps the
+      # scope, this file holds the token, and it dies with the job.
+      - name: authenticate to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: |
+          printf '//npm.pkg.github.com/:_authToken=%s\n' "$NODE_AUTH_TOKEN" > "$RUNNER_TEMP/.npmrc"
+          echo "NPM_CONFIG_USERCONFIG=$RUNNER_TEMP/.npmrc" >> "$GITHUB_ENV"
+
+      - run: pnpm install --frozen-lockfile
+
+      # The PR was checked on its merge commit, not on this one.
+      - run: pnpm check
+
+      - name: plan and pack what the registry is missing
+        run: |
+          pnpm exec changeset publish-plan --output "$RUNNER_TEMP/plan.json"
+          node scripts/check-publish-plan.mjs "$RUNNER_TEMP/plan.json"
+          pnpm exec changeset pack --from-publish-plan "$RUNNER_TEMP/plan.json" --out-dir "$RUNNER_TEMP/pack"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pack
+          path: ${{ runner.temp }}/pack
+          retention-days: 7
+
+      - name: pending changesets, release App configured
+        id: state
+        env:
+          CLIENT_ID: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          HAS_KEY: ${{ secrets.RELEASE_APP_KEY != '' }}
+        run: |
+          echo "changesets=$(find .changeset -name '*.md' ! -name README.md | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          if [ -n "$CLIENT_ID" ] && [ "$HAS_KEY" = true ]; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Release PR not updated::The RELEASE_APP_CLIENT_ID variable or the RELEASE_APP_KEY secret is missing (REHEARSAL.md, section 0). Publishing is not affected."
+          fi
+
+  publish:
+    # Runs no repository build or test code: the changesets CLI, pnpm and
+    # scripts/github-releases.mjs only.
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # tags and GitHub Releases
+      packages: write # pnpm publish to npm.pkg.github.com
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: authenticate to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: |
+          printf '//npm.pkg.github.com/:_authToken=%s\n' "$NODE_AUTH_TOKEN" > "$RUNNER_TEMP/.npmrc"
+          echo "NPM_CONFIG_USERCONFIG=$RUNNER_TEMP/.npmrc" >> "$GITHUB_ENV"
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: pack
+          path: ${{ runner.temp }}/pack
+
+      # Publishes the plan from `pack` and nothing else; an empty plan is a no-op.
+      - name: publish
+        run: pnpm exec changeset publish --from-pack-dir "$RUNNER_TEMP/pack" --no-git-tag
+
+      - name: tag and release every published version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/github-releases.mjs
+
+  version:
+    # Only after a clean publish: a release PR built on top of a version that
+    # never reached the registry would bury it under the next one.
+    needs: [pack, publish]
+    if: needs.pack.outputs.changesets != '0' && needs.pack.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read # the App token below does all the writing
+    steps:
+      # A PR pushed with the workflow's own GITHUB_TOKEN would not trigger CI,
+      # and `ci` is a required check; an App token does.
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # changelog-github links each entry to the commit that added its changeset
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Version mode only: this sub-action never publishes. Never put [skip ci]
+      # in the title or message - the squash of this PR must trigger this workflow.
+      - uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          github-token: ${{ steps.app.outputs.token }}
+          pr-title: 'chore(release): version packages'
+          commit-message: 'chore(release): version packages'
