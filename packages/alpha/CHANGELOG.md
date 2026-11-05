@@ -1,5 +1,11 @@
 # @olegshilov/sandbox-alpha
 
+## 0.2.1
+
+### Patch Changes
+
+- [#10](https://github.com/olegshilov/release-sandbox/pull/10) [`a7ea890`](https://github.com/olegshilov/release-sandbox/commit/a7ea8909e4373d7b41074fe678878a5a5a525ccc) Thanks [@olegshilov](https://github.com/olegshilov)! - Say goodbye once.
+
 ## 0.2.0
 
 ### Minor Changes
